@@ -199,6 +199,14 @@ class RobotCommand:
 
 
 def main():
+    # TODO: select field(from file, create random or create by user width and height)
+    # TODO: If user like that field and it not from file than save new field in file
+    # TODO: Print preview of field
+    # TODO: User creating commands for robot(game field is printed) Maybe save commands in file too ???
+    # TODO: Print for user field and commands which will be launched ???
+    # TODO: Menu: start game, change command in list, add to list, remove from list
+
+
     game_field = GameField(20)
     # TODO: check if width gt 20
     # game_field.create_field()
