@@ -1,7 +1,7 @@
 """
 Вариант №39: Список «Программа для робота»
 
-Обязательные поля:
+Обязательные поля:  ***** Already done ******
 - Номер команды (назначается автоматически);
 - Действие команды (выбирается пользователем из вариантов поворот налево, поворот направо, шаг вперёд, прыжок и т.д.);
 - Поле игры (двумерный динамический массив, каждая ячейка которого – клетка на поле действия, с заданной высотой или препятствием, а также финишем. 
@@ -86,14 +86,6 @@ jump -
 '''
 
 
-def main():
-    game_field = GameField(20)
-    # TODO: check if width gt 20
-    game_field.create_field()
-    game_field.print_field()
-    game_field.save_field()
-
-
 class GameField:
     wall = ("█", 3)
     barrier = ("≡", 2)
@@ -154,22 +146,73 @@ class GameField:
                 file.write('\n')
 
     def upload_field(self):
-        pass
+        with open('field.txt', 'r') as file:
+            for i in range(self.height):
+                self.field.append([])
+                for j in range(self.width+1):  # Width+1 because in file one more than in field (last symbol \n)
+                    # Add walls around the field
+                    cell = file.read(1)
+                    print(cell, type(cell))
+                    match cell:
+                        case '0':
+                            self.field[i].append(self.floor)
+                        case '2':
+                            self.field[i].append(self.barrier)
+                        case '3':
+                            self.field[i].append(self.wall)
 
 
 class RobotCommand:
-    game_field = ''
+    game_field = GameField(20)
     commands_counter = 0
+    next_command_id = 0
 
-    def __init__(self):
-        self.command_id = 0
-        '''поворот
-        налево, поворот
-        направо, шаг
-        вперёд, прыжок'''
-        self.move = ''
-        self.robot = ('x', 'y', 'direction???') # like top bottom right left
-        self.commands_counter += 1
+    def __init__(self, move, amount_of_steps=None):
+        # TODO: make just one step command or can in one command do few steps
+        self.command_id = RobotCommand.next_command_id
+        self.move = move  # turn_right, turn_left, turn_bottom, turn_top, step, jump
+        self.robot = [0, 0, 'bottom']
+        match self.move:
+            case 'turn_right':
+                self.robot[2] = 'right'
+            case 'turn_left':
+                self.robot[2] = 'left'
+            case 'turn_bottom':
+                self.robot[2] = 'bottom'
+            case 'turn_top':
+                self.robot[2] = 'top'
+            case 'step':
+                match self.robot[2]:
+                    case 'right':
+                        self.robot[0] += amount_of_steps
+                    case 'left':
+                        self.robot[0] -= amount_of_steps
+                    case 'bottom':
+                        self.robot[1] -= amount_of_steps
+                    case 'top':
+                        self.robot[1] += amount_of_steps
+            case 'jump':
+                pass
+        self.next_command = None
+        RobotCommand.commands_counter += 1
+        RobotCommand.next_command_id += 1
+
+
+def main():
+    game_field = GameField(20)
+    # TODO: check if width gt 20
+    # game_field.create_field()
+    # TODO: if field bigger then in file will bad result, so need take width and height of field from file
+    game_field.upload_field()
+    game_field.print_field()
+    RobotCommand.game_field = game_field
+    # TODO: need bidirectional linked list ???
+    r1 = RobotCommand('step', 2)
+    r2 = RobotCommand('turn_right')
+    print(r1.__dict__)
+    print(r2.__dict__)
+    print(RobotCommand.commands_counter)
+    # game_field.save_field()
 
 
 if __name__ == "__main__":
