@@ -14,21 +14,21 @@
 - Ручная (пользовательская) инициализация игрового поля (макс. 10х10);  +
 - Случайная инициализация игрового поля (по возможности);  +
 - Вывод поля и команд на экран;  +
-- Исполнение команд роботом.
+- Исполнение команд роботом. +
 
 Возможности программы:
 - Выбор режима игры (поле из файла, пользовательское или случайное);  +
-- Запись пользовательского поля в файл;
+- Запись пользовательского поля в файл; +
 - Наличие основной «программы» и «функций» (от 1 до 3);
-- Составление «программы» робота из команд;
+- Составление «программы» робота из команд; +
 - Замена, вставка или удаление любой команды между двумя другими;
 - Вывод поля и команд на экран;  +
-- Запуск «программы».
+- Запуск «программы». +
 
 Требования к программе:
-- Организация команд в виде созданного вручную списка (отдельный список для основной «программы» и каждой «функции»);
+- Организация команд в виде созданного вручную списка (отдельный список для основной «программы» и каждой «функции»);  +-
 - Максимально предусмотренные ошибки пользователя;  +
-- Статические и конст. методы, параметры по умолчанию, перегрузка [];
+- Статические и конст. методы, параметры по умолчанию, перегрузка []; +-
 - Визуальное отображение псевдографикой (при помощи таблицы ASCII);  +
 
 Пояснения:
@@ -44,17 +44,10 @@
 import os
 import random
 import time
-import random
+import json
 from colorama import init, Fore, Back, Style
 
 init(autoreset=True)
-
-"""
-█ - wall (height - 3)
-≡ - barrier (height - 2)
-© - robot (height - 1)
-░ - floor (height - 0)
-"""
 
 """
 Commands(emoji): 
@@ -66,41 +59,23 @@ jump - ?
 """
 
 
-# print(Style.BRIGHT + Back.RED + "█", end='')
-# print('≡', end='')
-# print(Style.BRIGHT + Back.RED + "█")
-# print(Style.BRIGHT + Back.RED + "█", end='')
-# print('©', end='')
-# print(Style.BRIGHT + Back.RED + "█")
-
-
-'''
- 12345678901234567890123
-█████████████████████████ 
-█░░░░░░░░░█░░░≡░░░░░█░░░█ 1
-█░░░░░█░░░░░░░░█░░░█░░░░█ 2
-█   ░©░  ≡    ≡         █ 3
-█   ≡      █      █     █ 4
-█            ≡      ≡   █ 5
-█      █ ≡  █    █      █ 6
-█    █       ≡      ≡   █ 7
-█         █       █     F 8
-█████████████████████████ 
-'''
-
-
 class GameField:
-    wall = ("█", 3)
-    barrier = ("≡", 2)
-    floor = ("░", 0)
+    wall = ["█", 3]
+    barrier = ["≡", 2]
+    floor = ["░", 0]
+    robot_item = ["©", 1]
 
-    def __init__(self, width, height=None):
+    def __init__(self, width=None, height=None):  # Both None if field upload from file
         # Add 2 for making borders
-        self.width = width + 2
-        if height is None:
-            self.height = width//3 + 2
+        if width is not None:
+            self.width = width + 2
+            if height is None:
+                self.height = width//3 + 2
+            else:
+                self.height = height + 2
         else:
-            self.height = height + 2
+            self.width = 0
+            self.height = 0
         self.field = []
 
     def create_field(self):
@@ -109,19 +84,20 @@ class GameField:
             for j in range(self.width):
                 # Add walls around the field
                 if i == 0 or i == self.height-1 or j == 0 or j == self.width-1:
-                    self.field[i].append(self.wall)
+                    self.field[i].append([*self.wall, -1, -1])
                 else:
                     # Add wall, barrier or ordinary floor in field
                     # If random_number is 0 then add barrier else if 1 add wall else floor
-                    random_number = random.randint(0, 5)
+                    random_number = random.randint(0, 10)
                     if random_number == 0:
-                        self.field[i].append(self.barrier)
+                        # Symbol for printing, height of cell, x, y
+                        self.field[i].append([*self.barrier, j, i])
                     elif random_number == 1:
-                        self.field[i].append(self.wall)
+                        self.field[i].append([*self.wall, j, i])
                     else:
-                        self.field[i].append(self.floor)
+                        self.field[i].append([*self.floor, j, i])
 
-    def print_field(self, robot_position=None):
+    def print_field(self, robot_position=None):  # robot_position=[x, y]
         print(' ', end='')
         # Print numbers at the top of the field
         for number in range(1, self.width-1):  # -1 Because we had to add 2 positions for the borders.
@@ -129,39 +105,63 @@ class GameField:
         print('')
         for index, row in enumerate(self.field):
             for cell in row:
-                match cell:
-                    case self.wall:
-                        print(Style.BRIGHT + Fore.CYAN + cell[0], end='')
-                    case self.barrier:
-                        print(Style.BRIGHT + Fore.RED + cell[0], end='')
-                    case self.floor:
-                        print(cell[0], end='')
+                if robot_position is not None and robot_position[0] == cell[2] and robot_position[1] == cell[3]:
+                    print(Style.BRIGHT + Fore.GREEN + self.robot_item[0], end='')
+                else:
+                    match cell[0:2]:  # Without coordinates
+                        case self.wall:
+                            print(Style.BRIGHT + Fore.CYAN + cell[0], end='')
+                        case self.barrier:
+                            print(Style.BRIGHT + Fore.RED + cell[0], end='')
+                        case self.floor:
+                            print(cell[0], end='')
             # Print numbers at the right of the field
             if index != 0 and index != self.height-1:
                 print(str(index)[-1], end='')
             print('')
 
     def save_field(self):
-        with open('field.txt', 'w') as file:
-            for index, row in enumerate(self.field):
-                for cell in row:
-                    file.write(str(cell[1]))
-                file.write('\n')
+        height = self.height
+        width = self.width
+        game_field_json = {
+            "width": width,
+            "height": height,
+            "field": []
+        }
+
+        for index, row in enumerate(self.field):
+            game_field_json["field"].append([])
+            for cell in row:
+                game_field_json["field"][index].append(str(cell[1]))
+
+        with open('file.json', 'w') as file:
+            json.dump(game_field_json, file)
 
     def upload_field(self, filename):
         with open(filename, 'r') as file:
+            json_object = json.load(file)
+            self.width, self.height = json_object["width"], json_object["height"]
             for i in range(self.height):
                 self.field.append([])
-                for j in range(self.width+1):  # Width+1 because in file one more than in field (last symbol \n)
+                for j in range(self.width):
                     # Add walls around the field
-                    cell = file.read(1)
+                    cell = json_object["field"][i][j]
                     match cell:
-                        case '0':
-                            self.field[i].append(self.floor)
+                        case '0':  # TODO: Think how make more pretty
+                            if i == 0 or i == self.height - 1 or j == 0 or j == self.width - 1:
+                                self.field[i].append([*self.floor, -1, -1])
+                            else:
+                                self.field[i].append([*self.floor, i, j])
                         case '2':
-                            self.field[i].append(self.barrier)
+                            if i == 0 or i == self.height - 1 or j == 0 or j == self.width - 1:
+                                self.field[i].append([*self.barrier, -1, -1])
+                            else:
+                                self.field[i].append([*self.barrier, i, j])
                         case '3':
-                            self.field[i].append(self.wall)
+                            if i == 0 or i == self.height - 1 or j == 0 or j == self.width - 1:
+                                self.field[i].append([*self.wall, -1, -1])
+                            else:
+                                self.field[i].append([*self.wall, i, j])
 
 
 class RobotCommand:
@@ -169,10 +169,19 @@ class RobotCommand:
     commands_counter = 0
     next_command_id = 0
 
-    def __init__(self, move, amount_of_steps=None):
+    def __init__(self, move):
         self.command_id = RobotCommand.next_command_id
         self.move = move  # turn_right, turn_left, turn_bottom, turn_top, step, jump
-        self.robot = [0, 0, 'bottom']  # Get from previous command
+        self.robot = [1, 1, 'bottom']
+        self.prev = None
+        self.next = None
+        RobotCommand.commands_counter += 1
+        RobotCommand.next_command_id += 1
+
+    def set_robot(self):
+        if self.prev is not None:
+            self.robot = self.prev.robot.copy()  # Get from previous command
+
         match self.move:
             case 'turn_right':
                 self.robot[2] = 'right'
@@ -185,13 +194,13 @@ class RobotCommand:
             case 'step':
                 match self.robot[2]:
                     case 'right':
-                        self.robot[0] += amount_of_steps
+                        self.robot[0] += 1
                     case 'left':
-                        self.robot[0] -= amount_of_steps
+                        self.robot[0] -= 1
                     case 'bottom':
-                        self.robot[1] -= amount_of_steps
+                        self.robot[1] += 1
                     case 'top':
-                        self.robot[1] += amount_of_steps
+                        self.robot[1] -= 1
             case 'jump':
                 match self.robot[2]:
                     case 'right':
@@ -202,40 +211,91 @@ class RobotCommand:
                         self.robot[1] -= 1
                     case 'top':
                         self.robot[1] += 1
-        self.prev_command = None
-        self.next_command = None
-        RobotCommand.commands_counter += 1
-        RobotCommand.next_command_id += 1
 
+
+class RobotCommandManager:
+    # bidirectional list
+    def __init__(self):
+        self.head = None  # Initally there are no elements in the list
+        self.tail = None
+
+    def push_back(self, new_move):  # Adding an element after the last element
+        new_node = RobotCommand(new_move)
+        new_node.prev = self.tail
+        new_node.set_robot()
+        if self.tail is None:  # checks whether the list is empty, if so make both head and tail as new node
+            self.head = new_node
+            self.tail = new_node
+            new_node.next = None  # the first element's previous pointer has to refer to null
+
+        else:  # If list is not empty, change pointers accordingly
+            self.tail.next = new_node
+            new_node.next = None
+            self.tail = new_node  # Make new node the new tail
+
+    def __getitem__(self, id):  # returns first element
+        if self.head is None:  # checks whether list is empty or not
+            print("List is empty")
+            return
+        i = 0
+        command = self.head
+        while i < id:
+            command = command.next
+            i += 1
+        return command
+
+    def insert_after(self, temp_node, new_data):  # Inserting a new node after a given node
+        if temp_node is None:
+            print("Given node is empty")
+
+        if temp_node is not None:
+            new_node = RobotCommand(new_data)
+            new_node.next = temp_node.next
+            temp_node.next = new_node
+            new_node.prev = temp_node
+            if new_node.next is not None:
+                new_node.next.prev = new_node
+
+            if temp_node == self.tail:  # checks whether new node is being added to the last element
+                self.tail = new_node  # makes new node the new tail
+
+    def insert_before(self, temp_node, new_data):  # Inserting a new node before a given node
+        if temp_node is None:
+            print("Given node is empty")
+
+        if temp_node is not None:
+            new_node = RobotCommand(new_data)
+            new_node.prev = temp_node.prev
+            temp_node.prev = new_node
+            new_node.next = temp_node
+            if new_node.prev is not None:
+                new_node.prev.next = new_node
+
+            if temp_node == self.head:  # checks whether new node is being added before the first element
+                self.head = new_node  # makes new node the new head
+
+    def insert_command(self, command_id):
+        pass
+
+    def remove_command(self, command_id):
+        pass
+
+    def change_command(self, command_id):
+        pass
 
 # TODO: ASK
-# Как я понял нужно создать связанный список для команд, верно ???
 
-# Можно ли создать 3 класса, один для поля игры, второй для команды как элемента списка,
-# а третий как менеджер этого самого списка
-
-# На защите можно будет создать виртуальное окружение(python venv) и если да,
-# то какой там питон будет стоять(я юзаю match в коде)
-
-# Когда юзер даёт роботу команду идти, то это нужно делать только один шаг
-# или можно спрашивать у юзера сколько шагов он желает сделать
-
-# В задании написано "Ручная (пользовательская) инициализация игрового поля (макс. 10х10);"
-# Можно изменить значение 10х10, потому что это реально очень мало ???
-
-# В задании написано "Наличие основной «программы» и «функций» (от 1 до 3);"
+# В задании написано "Наличие основной «программы» и «функций» (от 1 до 3);"  Юзер может создавать свой маленький список команд - функцию
 # Как я понял "программа" это именно последовательность команд для робота
 # Тогда что такое "функции", не думаю что это обычные функции в коде
 
-# Пояснить "Организация команд в виде созданного вручную списка (отдельный список для основной «программы» и каждой «функции»)"
+# Обяснить "Организация команд в виде созданного вручную списка (отдельный список для основной «программы» и каждой «функции»)"
 # Отдельный список для "функций" ???
 
-# Требования к программе это пря жесткие, жесткие или можно какой-то из подпунктов пункта не делать.
-# Смущает перегрузка [], она тут мне по сути не сильно и нужна
+# Требования к программе это прям жесткие, жесткие или можно какой-то из подпунктов пункта не делать.
+# Смущает перегрузка [], она тут мне по сути не сильно и нужна  Можно не делать
 
-# И возможен ли вариант вынести какие-то функции в отдельные файлы(P.S. чисто на будущее)
-
-# При команде прыжок, робот запрыгивает на препятствие или перепрыгивает его ???
+# При команде прыжок, робот запрыгивает на препятствие или перепрыгивает его ???  Запрыгивает на(и можно сделать перепрыгивание)
 
 
 def main():
@@ -268,9 +328,9 @@ def main():
                 continue
         elif select_field_settings == '3':
             field_from_file = True
-            # TODO: select from file
-            # TODO: if field bigger then in file will bad result, so need take width and height of field from file(save in json???)
-            pass
+            game_field = GameField()
+            game_field.upload_field('file.json')
+            break
         elif select_field_settings == '':
             game_field = GameField(30)
             break
@@ -278,7 +338,8 @@ def main():
             os.system('clear')  # cls
             print("Error. There is no this variant")
             continue
-    game_field.create_field()
+    if not field_from_file:
+        game_field.create_field()
     RobotCommand.game_field = game_field
     os.system('clear')  # cls
     print("Your game field: ")
@@ -290,31 +351,34 @@ def main():
         while True:
             save_field = input("If do you want save this field type 'yes'(default - no):  ")
             if save_field == "yes":
-                # TODO: Save this field
+                game_field.save_field()
                 pass
             else:
                 pass
             break
 
+    command_list = RobotCommandManager()
     while True:
-        # TODO: Create commands
+        command_list.push_back('turn_right')
+        command_list.push_back('step')
+        command_list.push_back('step')
+        command_list.push_back('turn_bottom')
+        command_list.push_back('step')
+        command_list.push_back('step')
         break
 
     # TODO: Print for user field and commands which will be launched ???
     # TODO: Menu: change command in list, add to list, remove from list
 
+    robot_position = command_list[5].robot[:2]  # TODO: do it in for loop
+    # print(robot_position)
+    command_list[5].game_field.print_field(robot_position)
+    time.sleep(5)
+
     # game_field.upload_field()
     # game_field.print_field()
 
     # TODO: THINK HOW AND ADD FINISH TO FIELD
-
-    # TODO: need bidirectional linked list ???
-    # r1 = RobotCommand('step', 2)
-    # r2 = RobotCommand('turn_right')
-    # print(r1.__dict__)
-    # print(r2.__dict__)
-    # print(RobotCommand.commands_counter)
-    # game_field.save_field()
 
 
 if __name__ == "__main__":
