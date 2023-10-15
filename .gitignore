@@ -1,2 +1,5 @@
 .idea/
 env*/
+
+*.txt
+*.json

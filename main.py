@@ -1,62 +1,12 @@
-"""
-Вариант №39: Список «Программа для робота»
-
-Обязательные поля:  ***** Already done ******
-- Номер команды (назначается автоматически);
-- Действие команды (выбирается пользователем из вариантов поворот налево, поворот направо, шаг вперёд, прыжок и т.д.);
-- Поле игры (двумерный динамический массив, каждая ячейка которого – клетка на поле действия, с заданной высотой или препятствием, а также финишем. 
-Заполняется из файла);
-- Робот (массив из трёх элементов – координат и направления);
-- Счётчик количества команд.
-
-Возможности класса:
-- Автоматическая инициализация игрового поля;  +
-- Ручная (пользовательская) инициализация игрового поля (макс. 10х10);  +
-- Случайная инициализация игрового поля (по возможности);  +
-- Вывод поля и команд на экран;  +
-- Исполнение команд роботом. +
-
-Возможности программы:
-- Выбор режима игры (поле из файла, пользовательское или случайное);  +
-- Запись пользовательского поля в файл; +
-- Наличие основной «программы» и «функций» (от 1 до 3);
-- Составление «программы» робота из команд; +
-- Замена, вставка или удаление любой команды между двумя другими;
-- Вывод поля и команд на экран;  +
-- Запуск «программы». +
-
-Требования к программе:
-- Организация команд в виде созданного вручную списка (отдельный список для основной «программы» и каждой «функции»);  +-
-- Максимально предусмотренные ошибки пользователя;  +
-- Статические и конст. методы, параметры по умолчанию, перегрузка []; +-
-- Визуальное отображение псевдографикой (при помощи таблицы ASCII);  +
-
-Пояснения:
-Есть поле, каждая ячейка которого имеет заданную высоту. На поле находится робот, размером в одну ячейку. 
-Он может свободно перемещаться по ячейкам, находящимся на одном с ним уровне и прыгать на ячейки, с уровнем отличающимся на один (в любую сторону). 
-Разница в больше уровней становится непреодолимым препятствием. Дополнительно можно придумать другие препятствия (например разрушаемые). 
-Каждый шаг или прыжок робота перемешает его на одну ячейку, а повороты – нет. Можно придумать и другие команды (например удары или проверки).
-Цель робота достичь финиша, который располагается где-то на поле. 
-Цель игрока, из имеющихся команд составить «программу», которая доведёт робота до финиша. 
-Сложность в том, что действия выполняются не в момент их выбора игроком, а лишь после того как программа будет готова и игрок нажмёт «старт».
-
-"""
 import os
 import random
 import time
 import json
+
+import emoji
 from colorama import init, Fore, Back, Style
 
 init(autoreset=True)
-
-"""
-Commands(emoji): 
-turn left - 👈
-turn right - 👉
-walk - ?
-jump - ?
-
-"""
 
 
 class GameField:
@@ -90,8 +40,8 @@ class GameField:
                     # Add wall, barrier or ordinary floor in field
                     # If random_number is 0 then add barrier else if 1 add wall else floor
 
-                    # TODO: Do the same for finish
-                    if i in [0, 1, 2] and len(self.field[i]) < 3:  # Set constantly square in top left corner with floor elements
+                    # Set constantly square in top left corner with floor elements
+                    if i in [0, 1, 2] and len(self.field[i]) < 3:
                         self.field[i].append([*self.floor, j, i])
                         continue
 
@@ -99,7 +49,8 @@ class GameField:
                         self.field[i].append([*self.finish, j, i])
                         continue
 
-                    if i in [self.height-4, self.height-3, self.height-2] and len(self.field[i]) > self.width-5:  # Set constantly square in bottom right corner with floor elements
+                    # Set constantly square in bottom right corner with floor elements
+                    if i in [self.height-4, self.height-3, self.height-2] and len(self.field[i]) > self.width-5:
                         self.field[i].append([*self.floor, j, i])
                         continue
 
@@ -112,6 +63,7 @@ class GameField:
                     else:
                         self.field[i].append([*self.floor, j, i])
 
+    # This method like const method in c++
     def print_field(self, robot_position=None):  # robot_position=[x, y]
         print(' ', end='')
         # Print numbers at the top of the field
@@ -167,22 +119,19 @@ class GameField:
                 for j in range(self.width):
                     # Add walls around the field
                     cell = json_object["field"][i][j]
+                    condition = i == 0 or i == self.height - 1 or j == 0 or j == self.width - 1
                     match cell:
-                        case '0':  # TODO: Think how make more pretty
-                            if i == 0 or i == self.height - 1 or j == 0 or j == self.width - 1:
-                                self.field[i].append([*self.floor, -1, -1])
-                            else:
-                                self.field[i].append([*self.floor, i, j])
+                        case '0':
+                            self.field[i].append([*self.floor, i, j])
                         case '2':
-                            if i == 0 or i == self.height - 1 or j == 0 or j == self.width - 1:
-                                self.field[i].append([*self.barrier, -1, -1])
-                            else:
-                                self.field[i].append([*self.barrier, i, j])
+                            self.field[i].append([*self.barrier, i, j])
                         case '3':
-                            if i == 0 or i == self.height - 1 or j == 0 or j == self.width - 1:
+                            if condition:
                                 self.field[i].append([*self.wall, -1, -1])
                             else:
                                 self.field[i].append([*self.wall, i, j])
+                        case '-1':
+                            self.field[i].append([*self.finish, i, j])
 
 
 class RobotCommand:
@@ -255,13 +204,13 @@ class RobotCommandManager:
             self.tail = new_node  # Make new node the new tail
         self.commands_counter += 1
 
-    def __getitem__(self, id):  # returns first element
-        if self.head is None:  # checks whether list is empty or not
+    def __getitem__(self, command_id):
+        if self.head is None:
             print("List is empty")
             return
         i = 0
         command = self.head
-        while i < id:
+        while i < command_id:
             command = command.next
             i += 1
         return command
@@ -274,44 +223,29 @@ class RobotCommandManager:
             command = command.next
         return ", ".join(list_of_moves) or "No commands yet"
 
-    # def insert_after(self, temp_node, new_data):  # Inserting a new node after a given node
-    #     if temp_node is None:
-    #         print("Given node is empty")
-    #
-    #     if temp_node is not None:
-    #         new_node = RobotCommand(new_data)
-    #         new_node.next = temp_node.next
-    #         temp_node.next = new_node
-    #         new_node.prev = temp_node
-    #         if new_node.next is not None:
-    #             new_node.next.prev = new_node
-    #
-    #         if temp_node == self.tail:  # checks whether new node is being added to the last element
-    #             self.tail = new_node  # makes new node the new tail
-    #
-    # def insert_before(self, temp_node, new_data):  # Inserting a new node before a given node
-    #     if temp_node is None:
-    #         print("Given node is empty")
-    #
-    #     if temp_node is not None:
-    #         new_node = RobotCommand(new_data)
-    #         new_node.prev = temp_node.prev
-    #         temp_node.prev = new_node
-    #         new_node.next = temp_node
-    #         if new_node.prev is not None:
-    #             new_node.prev.next = new_node
-    #
-    #         if temp_node == self.head:  # checks whether new node is being added before the first element
-    #             self.head = new_node  # makes new node the new head
+    def remove_command(self, command_id):
+        pass
 
+    def change_command(self, command_id):
+        pass
 
-# TODO: ASK
-# В задании написано "Наличие основной «программы» и «функций» (от 1 до 3);"  Юзер может создавать свой маленький список команд - функцию
-# Как я понял "программа" это именно последовательность команд для робота
-# Тогда что такое "функции", не думаю что это обычные функции в коде
+    def insert_command_after(self, command_id):
+        pass
 
-# Обяснить "Организация команд в виде созданного вручную списка (отдельный список для основной «программы» и каждой «функции»)"
-# Отдельный список для "функций" ???
+    def insert_after(self, temp_node, new_data):  # Inserting a new node after a given node
+        if temp_node is None:
+            print("Given node is empty")
+
+        if temp_node is not None:
+            new_node = RobotCommand(new_data)
+            new_node.next = temp_node.next
+            temp_node.next = new_node
+            new_node.prev = temp_node
+            if new_node.next is not None:
+                new_node.next.prev = new_node
+
+            if temp_node == self.tail:  # checks whether new node is being added to the last element
+                self.tail = new_node  # makes new node the new tail
 
 
 def start_game(command_list):
@@ -319,6 +253,21 @@ def start_game(command_list):
         os.system('clear')  # cls
         robot_position = command_list[command_number].robot[:2]
         command_list[command_number].game_field.print_field(robot_position)
+
+        print(command_list[command_number].move, end='-')
+        match command_list[command_number].move:
+            case 'turn_right':
+                print(emoji.emojize(':backhand_index_pointing_right:'))
+            case 'turn_left':
+                print(emoji.emojize(':backhand_index_pointing_left:'))
+            case 'turn_bottom':
+                print(emoji.emojize(':backhand_index_pointing_down:'))
+            case 'turn_top':
+                print(emoji.emojize(':backhand_index_pointing_up:'))
+            case 'step':
+                print(emoji.emojize(':footprints:'))
+            case 'jump':
+                print(emoji.emojize(':leg:'))
         time.sleep(1)
 
 
@@ -363,23 +312,25 @@ def main():
             print("Error. There is no this variant")
             continue
 
+    # TODO: Maybe need create game field object in one layer and then set width height
     if not field_from_file:
         game_field.create_field()  # If from file field will create by default
 
     RobotCommand.game_field = game_field
     os.system('clear')  # cls
 
-    # TODO: Field preview
     print("Field preview: ")
     game_field.print_field()
+    time.sleep(5)
     if not field_from_file:
         save_field = input("If do you want save this field type 'yes'(default - no):  ")
         if save_field == "yes":
             game_field.save_field()
+    os.system('clear')  # cls
 
+    # Command management
     command_list = RobotCommandManager()
     while True:
-        os.system('clear')  # cls
         menu_manage_commands = ("0 - Add commands\n"
                                 "1 - Change command\n"
                                 "2 - Remove command\n"
@@ -418,38 +369,41 @@ def main():
                         break
                 os.system("clear")  # cls
         elif manage_commands_choice == '1':
-            pass
-            # while True:
-            #     game_field.print_field()
-            #     print("List of all commands: ", command_list.preview_all_commands())
-            #     menu_commands = ("0 - Turn right\n"
-            #                      "1 - Turn left\n"
-            #                      "2 - Turn top\n"
-            #                      "3 - Turn bottom\n"
-            #                      "4 - Step\n"
-            #                      "5 - Jump\n"
-            #                      "6 - Exit\n"
-            #                      )
-            #     print(menu_commands)
-            #     command_choice = input("Select(default - 4): ")
-            #     match command_choice:
-            #         case '':
-            #             command_list.push_back('step')
-            #         case '0':
-            #             command_list.push_back('turn_right')
-            #         case '1':
-            #             command_list.push_back('turn_left')
-            #         case '2':
-            #             command_list.push_back('turn_top')
-            #         case '3':
-            #             command_list.push_back('turn_bottom')
-            #         case '4':
-            #             command_list.push_back('step')
-            #         case '5':
-            #             command_list.push_back('jump')
-            #         case '6':
-            #             break
-            #     os.system("clear")  # cls
+            while True:
+                game_field.print_field()
+                print("List of all commands: ", command_list.preview_all_commands())
+                command_choice = input("Select which command you would like to change(number): ")
+                if command_choice > command_list.commands_counter:
+                    pass
+
+                menu_commands = ("0 - Turn right\n"
+                                 "1 - Turn left\n"
+                                 "2 - Turn top\n"
+                                 "3 - Turn bottom\n"
+                                 "4 - Step\n"
+                                 "5 - Jump\n"
+                                 "6 - Exit\n")
+                print(menu_commands)
+                command_choice = input("Select(default - 4): ")
+                # TODO: change from switch cases to dicts
+                match command_choice:
+                    case '':
+                        command_list.change_command('step')
+                    case '0':
+                        command_list.change_command('turn_right')
+                    case '1':
+                        command_list.change_command('turn_left')
+                    case '2':
+                        command_list.change_command('turn_top')
+                    case '3':
+                        command_list.change_command('turn_bottom')
+                    case '4':
+                        command_list.change_command('step')
+                    case '5':
+                        command_list.change_command('jump')
+                    case '6':
+                        break
+                os.system("clear")  # cls
         elif manage_commands_choice == '2':
             pass
             # while True:
@@ -486,12 +440,18 @@ def main():
         elif manage_commands_choice == '3':  # Start game
             break
         else:
-            pass  # TODO: Print message ???
+            os.system("clear")
+            print("Error. There is no this option")
+            continue
+
+    # TODO: Add ability to make small lists of commands and add them in main list (functions)
+    # TODO: HOW check if robot jump on the barrier ??? (If not - lose)
+    # TODO: Adding command between another, change command between, remove between
+    # TODO: Make check if robot at the end
 
     # Start game
+    os.system('clear')  # cls
     start_game(command_list)
-
-    # TODO: THINK HOW AND ADD FINISH TO FIELD
 
 
 if __name__ == "__main__":
