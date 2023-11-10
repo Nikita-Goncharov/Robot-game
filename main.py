@@ -307,8 +307,26 @@ class RobotCommandManager:
                 self.tail = new_node  # makes new node the new tail
             self.commands_counter += 1
 
-    def insert_function_after(self):
-        ...
+    def insert_function_after(self, command_id, function):  # TODO: think if main_list is empty
+        i = 0
+        command = self.head
+        while command_id != i:
+            command = command.next
+            i += 1
+
+        if command is not None:
+            function.tail.next = command.next
+            command.next = function.head
+            function.head.prev = command
+            if function.tail.next is not None:
+                function.tail.next.prev = function.tail
+
+            if command == self.tail:  # checks whether new node is being added to the last element
+                self.tail = function.tail  # makes new node the new tail
+            self.commands_counter += function.commands_counter
+
+    def __repr__(self):
+        return self.title
 
 
 def start_game(command_list):
@@ -342,73 +360,8 @@ def field_and_command_preview(game_field, main_command_list):
     print("Basic robot direction - right")
 
 
-def main():
-    field_from_file = False
-    menu = ("0 - Auto set width and height of field\n"
-            "1 - Random set width and height of field(starts from 25 cells)\n"
-            "2 - User set width and height of field\n"
-            "3 - Select from file\n")
-
-    while True:
-        # In multi string are added unnecessary spaces
-        print(menu)
-
-        select_field_settings = input("Select(default - 0): ")
-        if select_field_settings == '0':
-            game_field = GameField(30)
-            break
-        elif select_field_settings == '1':
-            random_width = random.randint(25, 50)
-            game_field = GameField(random_width)
-            break
-        elif select_field_settings == '2':
-            width = int(input("Field width: "))
-            height = int(input("Field height: "))
-            if width > 20 and height > 10:
-                game_field = GameField(width, height)
-                break
-            else:
-                os.system('clear')  # cls
-                print("Error. Width and height must be more than 20")
-                continue
-        elif select_field_settings == '3':
-            field_from_file = True
-            game_field = GameField()
-            while True:
-                all_field_files = list(filter(lambda filename: ".json" in filename, os.listdir()))
-                for index, filename in enumerate(all_field_files):
-                    print(f"{index+1}) {filename}")
-                file_choice = int(input("Number of file from which you want load field: "))
-                if file_choice <= len(all_field_files):
-                    break
-                else:
-                    os.system('clear')  # cls
-                    print("Error.  There is no this variant")
-            game_field.upload_field(all_field_files[file_choice-1])
-            break
-        elif select_field_settings == '':
-            game_field = GameField(30)
-            break
-        else:
-            os.system('clear')  # cls
-            print("Error. There is no this variant")
-            continue
-
-    if not field_from_file:
-        game_field.create_field()  # If from file field will create by default
-
-    RobotCommand.game_field = game_field
-    os.system('clear')  # cls
-
-    print("Field preview: ")
-    game_field.print_field()
-    time.sleep(5)
-    if not field_from_file:
-        save_field = input("If do you want save this field type 'yes'(default - no):  ")
-        if save_field == "yes":
-            game_field.save_field()
-    os.system('clear')  # cls
-
+# I KNOW, IT IS DIRTY FUNCTION, TODO: IF I`LL HAVE IDEAS HOW CHANGE IT - I`LL CHANGE
+def manage_commands_in_list(game_field, command_list, main_list=False):
     command_number_dict = {
         "0": "turn_right",
         "1": "turn_left",
@@ -420,11 +373,20 @@ def main():
         # "6": it is for exit
     }
 
-    menu_manage_commands = ("0 - Add commands\n"
-                            "1 - Change command\n"
-                            "2 - Add command after another\n"
-                            "3 - Remove command\n"
-                            "4 - Start game\n")
+    if main_list:
+
+        menu_manage_commands = ("0 - Add commands\n"
+                                "1 - Change command\n"
+                                "2 - Add command after another\n"
+                                # Need add ability to insert functions  TODO:
+                                "3 - Remove command\n"
+                                "4 - Exit\n")
+    else:
+        menu_manage_commands = ("0 - Add commands\n"
+                                "1 - Change command\n"
+                                "2 - Add command after another\n"
+                                "3 - Remove command\n"
+                                "4 - Exit\n")
 
     menu_commands = ("0 - Turn right\n"
                      "1 - Turn left\n"
@@ -434,31 +396,6 @@ def main():
                      "5 - Jump\n"
                      "6 - Exit\n")
 
-    # Command management
-    """
-    Команды:
-
-    Выбрать:
-    Манипуляции с:
-    -Основной программой(запустится при старте)
-    -Функцией1  # TODO: может стоит сделать чтобы юзер мог выбирать им названия
-    -Функцией2
-    -Функцией3
-    
-    -Создание новой функции
-    -Старт игры(команды выполняются с основной программы)
-    
-    Если выбрана программа или функция:
-    -Добавление команды
-    -Удаление
-    -Вставка
-    -Замена
-    -Вставка функции(при этом вставленая функция не удаляется)    
-    -Выйти на уровень выбора(осн. программа, функции, старт....)
-    (При любом из этих действий спрашивать не хочет ли юзер выйти на уровень выбора действий с программой(функцией))
-    """
-
-    command_list = RobotCommandManager()
     while True:
         print(menu_manage_commands)
         manage_commands_choice = input("Select(default - 0): ")
@@ -512,7 +449,6 @@ def main():
         elif manage_commands_choice == '3':
             while True:
                 field_and_command_preview(game_field, command_list)
-                # TODO: ability for exit
                 command_choice = int(input("Select which command you would like to remove(number): "))
                 if command_choice >= 0 and command_choice <= command_list.commands_counter:
                     command_list.remove_command(command_choice-1)
@@ -524,26 +460,121 @@ def main():
                 else:
                     os.system("clear")  # cls
                     print("Error. There is no command with this index in the list")
-
-        elif manage_commands_choice == '4':  # Continue program and start game
-            # Start game
-            try:
-                start_game(command_list)
-            except UserWonException as ex:
-                print(Back.GREEN + Fore.WHITE + str(ex))
-                break
-            except UserLoseException as ex:
-                os.system('clear')  # cls
-                print(Back.RED + Fore.WHITE + str(ex))
-
+        elif manage_commands_choice == '4':
+            break
         else:
             os.system("clear")
             print("Error. There is no this option")
             continue
 
-    # TODO: Add ability to make small lists of commands and add them in main list (functions)
-    # TODO: maybe need do checks in methods(remove, change, insert) ???
 
+def main():
+    field_from_file = False
+    menu = ("0) Auto set width and height of field\n"
+            "1) Random set width and height of field(starts from 25 cells)\n"
+            "2) User set width and height of field\n"
+            "3) Select from file\n")
+
+    while True:
+        # In multi string are added unnecessary spaces
+        print(menu)
+
+        select_field_settings = input("Select(default - 0): ")
+        if select_field_settings == '0':
+            game_field = GameField(30)
+            break
+        elif select_field_settings == '1':
+            random_width = random.randint(25, 50)
+            game_field = GameField(random_width)
+            break
+        elif select_field_settings == '2':
+            width = int(input("Field width: "))
+            height = int(input("Field height: "))
+            if width > 20 and height > 10:
+                game_field = GameField(width, height)
+                break
+            else:
+                os.system('clear')  # cls
+                print("Error. Width and height must be more than 20")
+                continue
+        elif select_field_settings == '3':
+            field_from_file = True
+            game_field = GameField()
+            while True:
+                all_field_files = list(filter(lambda filename: ".json" in filename, os.listdir()))
+                for index, filename in enumerate(all_field_files):
+                    print(f"{index+1}) {filename}")
+                file_choice = input("Number of file from which you want load field: ")
+                if file_choice != '' and int(file_choice) <= len(all_field_files):
+                    break
+                else:
+                    os.system('clear')  # cls
+                    print("Error.  There is no this variant")
+            game_field.upload_field(all_field_files[int(file_choice)-1])
+            break
+        elif select_field_settings == '':
+            game_field = GameField(30)
+            break
+        else:
+            os.system('clear')  # cls
+            print("Error. There is no this variant")
+            continue
+
+    if not field_from_file:
+        game_field.create_field()  # If from file field will create by default
+
+    RobotCommand.game_field = game_field
+    os.system('clear')  # cls
+
+    print("Field preview: ")
+    game_field.print_field()
+    time.sleep(5)
+    if not field_from_file:
+        save_field = input("If do you want save this field type 'yes'(default - no):  ")
+        if save_field == "yes":
+            game_field.save_field()
+    os.system('clear')  # cls
+
+    # Command management
+
+    command_list = RobotCommandManager()
+    functions = [RobotCommandManager(title=f"Function {i+1}") for i in range(3)]
+
+    while True:
+        print("0) Main program")
+        for index, func in enumerate(functions):
+            print(f"{index+1}) {func.title}")
+        print(f"{len(functions)+1}) Create new function")
+        print(f"{len(functions)+2}) Start game")
+        main_manage_choice = int(input(f"Select(default - {len(functions)+2}): "))
+        if 0 <= main_manage_choice <= len(functions)+2:
+            if main_manage_choice == 0:
+                manage_commands_in_list(game_field, command_list, main_list=True)
+
+            elif 1 <= main_manage_choice <= len(functions):
+                function = functions[main_manage_choice-1]
+                manage_commands_in_list(game_field, function)
+                functions[main_manage_choice-1] = function
+
+            elif main_manage_choice == len(functions)+1:
+                new_func_name = input("Select name for new function: ")
+                functions.append(RobotCommandManager(title=new_func_name))
+
+            elif main_manage_choice == len(functions)+2:
+                try:
+                    start_game(command_list)
+                except UserWonException as ex:
+                    print(Back.GREEN + Fore.WHITE + str(ex))
+                    break
+                except UserLoseException as ex:
+                    os.system('clear')  # cls
+                    print(Back.RED + Fore.WHITE + str(ex))
+        else:
+            os.system("clear")  # cls
+            print("Error. There is no this option")
+
+
+# TODO: Разница в больше уровней становится непреодолимым препятствием. Несколько уровней в одной игре ?????????
 
 if __name__ == "__main__":
     main()
