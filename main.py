@@ -122,7 +122,7 @@ class GameField:
             for cell in row:
                 game_field_json["field"][index].append(str(cell[1]))
 
-        file_random_section = str(random.randint(1000, 9999))
+        file_random_section = str(random.randint(1000, 9999))  # TODO: fix
         with open(f"file_{file_random_section}.json", 'w') as file:
             json.dump(game_field_json, file)
 
@@ -165,8 +165,8 @@ class RobotCommand:
     def set_robot(self):
         if self.prev is not None:
             self.robot = self.prev.robot.copy()  # Get from previous command
-        else:  # If first command was deleted
-            self.robot = {"x": 1, "y": 1, "direction": "right", "is_jump": False}  # TODO: think is it really need ???
+        # else:  # If first command was deleted
+        #     self.robot = {"x": 1, "y": 1, "direction": "right", "is_jump": False}  # TODO: think is it really need ???
 
         match self.move:
             case 'turn_right':
@@ -206,21 +206,21 @@ class RobotCommandManager:
     def __init__(self, title="Main program"):
         self.commands_counter = 0
         self.title = title
-        self.head = None  # Initially there are no elements in the list
+        self.head = None
         self.tail = None
 
-    def push_back(self, new_move):  # Adding an element after the last element
+    def push_back(self, new_move):
         new_node = RobotCommand(new_move)
         new_node.prev = self.tail
-        if self.tail is None:  # checks whether the list is empty, if so make both head and tail as new node
+        if self.tail is None:
             self.head = new_node
             self.tail = new_node
-            new_node.next = None  # the first element's previous pointer has to refer to null
+            new_node.next = None
 
-        else:  # If list is not empty, change pointers accordingly
+        else:
             self.tail.next = new_node
             new_node.next = None
-            self.tail = new_node  # Make new node the new tail
+            self.tail = new_node
         self.commands_counter += 1
 
     def __getitem__(self, command_id):
@@ -303,8 +303,8 @@ class RobotCommandManager:
             if new_node.next is not None:
                 new_node.next.prev = new_node
 
-            if command == self.tail:  # checks whether new node is being added to the last element
-                self.tail = new_node  # makes new node the new tail
+            if command == self.tail:
+                self.tail = new_node
             self.commands_counter += 1
 
     def insert_function_after(self, command_id, function):  # TODO: think if main_list is empty
@@ -321,8 +321,8 @@ class RobotCommandManager:
             if function.tail.next is not None:
                 function.tail.next.prev = function.tail
 
-            if command == self.tail:  # checks whether new node is being added to the last element
-                self.tail = function.tail  # makes new node the new tail
+            if command == self.tail:
+                self.tail = function.tail
             self.commands_counter += function.commands_counter
 
     def __repr__(self):
@@ -501,7 +501,7 @@ def main():
             field_from_file = True
             game_field = GameField()
             while True:
-                all_field_files = list(filter(lambda filename: ".json" in filename, os.listdir()))
+                all_field_files = list(filter(lambda file_name: ".json" in file_name, os.listdir()))
                 for index, filename in enumerate(all_field_files):
                     print(f"{index+1}) {filename}")
                 file_choice = input("Number of file from which you want load field: ")
@@ -546,7 +546,8 @@ def main():
             print(f"{index+1}) {func.title}")
         print(f"{len(functions)+1}) Create new function")
         print(f"{len(functions)+2}) Start game")
-        main_manage_choice = int(input(f"Select(default - {len(functions)+2}): "))
+        main_manage_choice = input(f"Select(default - {len(functions)+2}): ")
+        main_manage_choice = int(main_manage_choice) if main_manage_choice.isnumeric() else len(functions)+2
         if 0 <= main_manage_choice <= len(functions)+2:
             if main_manage_choice == 0:
                 manage_commands_in_list(game_field, command_list, main_list=True)
@@ -563,6 +564,7 @@ def main():
             elif main_manage_choice == len(functions)+2:
                 try:
                     start_game(command_list)
+                    # TODO: print too something(if robot stay in the field)
                 except UserWonException as ex:
                     print(Back.GREEN + Fore.WHITE + str(ex))
                     break
@@ -574,7 +576,7 @@ def main():
             print("Error. There is no this option")
 
 
-# TODO: Разница в больше уровней становится непреодолимым препятствием. Несколько уровней в одной игре ?????????
+# TODO: Разница в больше уровней становится непреодолимым препятствием. Думаю нет
 
 if __name__ == "__main__":
     main()
