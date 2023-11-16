@@ -122,7 +122,10 @@ class GameField:
             for cell in row:
                 game_field_json["field"][index].append(str(cell[1]))
 
-        file_random_section = str(random.randint(1000, 9999))  # TODO: fix
+        file_random_section = 0
+        all_field_files_stringed = "".join(self.get_game_field_files())
+        while file_random_section == 0 or file_random_section in all_field_files_stringed:
+            file_random_section = str(random.randint(1000, 9999))
         with open(f"file_{file_random_section}.json", 'w') as file:
             json.dump(game_field_json, file)
 
@@ -149,6 +152,10 @@ class GameField:
                         case '-1':
                             self.field[i].append([*self.finish, i, j])
 
+    @staticmethod
+    def get_game_field_files():
+        return list(filter(lambda file_name: ".json" in file_name, os.listdir()))
+
 
 class RobotCommand:
     game_field = GameField(20)
@@ -165,8 +172,6 @@ class RobotCommand:
     def set_robot(self):
         if self.prev is not None:
             self.robot = self.prev.robot.copy()  # Get from previous command
-        # else:  # If first command was deleted
-        #     self.robot = {"x": 1, "y": 1, "direction": "right", "is_jump": False}  # TODO: think is it really need ???
 
         match self.move:
             case 'turn_right':
@@ -330,6 +335,10 @@ class RobotCommandManager:
 
 
 def start_game(command_list):
+    """Setting robot position for every command and printing game progress + awesome emoji
+
+    """
+
     for command_number in range(command_list.commands_counter):
         os.system('clear')  # cls
         command_list[command_number].set_robot()
@@ -337,7 +346,7 @@ def start_game(command_list):
         command_list[command_number].game_field.print_field(robot_position)
 
         print(command_list[command_number].move, end='-')
-        match command_list[command_number].move:
+        match command_list[command_number].move:  # TODO: set it in dict with emoji values
             case 'turn_right':
                 print(emoji.emojize(':backhand_index_pointing_right:'))
             case 'turn_left':
@@ -354,7 +363,9 @@ def start_game(command_list):
 
 
 def field_and_command_preview(game_field, main_command_list):
-    # Just for preview
+    """Game field and commands preview for user comfort using
+
+    """
     game_field.print_field({"x": 1, "y": 1, "direction": "right", "is_jump": False})
     print("List of all commands: ", main_command_list.preview_all_commands())
     print("Basic robot direction - right")
@@ -362,6 +373,10 @@ def field_and_command_preview(game_field, main_command_list):
 
 # I KNOW, IT IS DIRTY FUNCTION, TODO: IF I`LL HAVE IDEAS HOW CHANGE IT - I`LL CHANGE
 def manage_commands_in_list(game_field, command_list, main_list=False):
+    """Commands management for main program and for functions(adding, updating, deleting, etc)
+
+    """
+
     command_number_dict = {
         "0": "turn_right",
         "1": "turn_left",
@@ -469,16 +484,20 @@ def manage_commands_in_list(game_field, command_list, main_list=False):
 
 
 def main():
+    """Main program function(game creation, commands adding, start game)
+
+    """
     field_from_file = False
+
+    # In multi string are added unnecessary spaces
     menu = ("0) Auto set width and height of field\n"
             "1) Random set width and height of field(starts from 25 cells)\n"
             "2) User set width and height of field\n"
             "3) Select from file\n")
 
     while True:
-        # In multi string are added unnecessary spaces
+        # Game field creation
         print(menu)
-
         select_field_settings = input("Select(default - 0): ")
         if select_field_settings == '0':
             game_field = GameField(30)
@@ -501,7 +520,7 @@ def main():
             field_from_file = True
             game_field = GameField()
             while True:
-                all_field_files = list(filter(lambda file_name: ".json" in file_name, os.listdir()))
+                all_field_files = GameField.get_game_field_files()
                 for index, filename in enumerate(all_field_files):
                     print(f"{index+1}) {filename}")
                 file_choice = input("Number of file from which you want load field: ")
@@ -536,7 +555,6 @@ def main():
     os.system('clear')  # cls
 
     # Command management
-
     command_list = RobotCommandManager()
     functions = [RobotCommandManager(title=f"Function {i+1}") for i in range(3)]
 
