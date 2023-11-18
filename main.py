@@ -4,7 +4,24 @@ import time
 import json
 
 import emoji
+import cfonts
 from colorama import init, Fore, Back, Style
+
+__doc__ = """
+    File structure:
+    class UserWonException
+    class UserLoseException
+    
+    class GameField
+    class RobotCommand
+    class RobotCommandManager
+    
+    func start_game
+    func field_and_command_preview
+    func manage_commands_in_list
+    func main (starting point)
+"""
+
 
 init(autoreset=True)
 
@@ -159,15 +176,15 @@ class GameField:
 
 class RobotCommand:
     game_field = GameField(20)
-    next_command_id = 0
+    __next_command_id = 0
 
     def __init__(self, move):
-        self.command_id = RobotCommand.next_command_id
+        self.command_id = RobotCommand.__next_command_id
         self.move = move  # turn_right, turn_left, turn_bottom, turn_top, step, jump
         self.robot = {"x": 1, "y": 1, "direction": "right", "is_jump": False}
         self.prev = None
         self.next = None
-        RobotCommand.next_command_id += 1
+        RobotCommand.__next_command_id += 1
 
     def set_robot(self):
         if self.prev is not None:
@@ -330,6 +347,12 @@ class RobotCommandManager:
                 self.tail = function.tail
             self.commands_counter += function.commands_counter
 
+    def insert_command__to_start(self):
+        ...
+
+    def insert_function_to_start(self):
+        ...
+
     def __repr__(self):
         return self.title
 
@@ -366,13 +389,17 @@ def field_and_command_preview(game_field, main_command_list):
     """Game field and commands preview for user comfort using
 
     """
+
+    commands_preview = main_command_list.preview_all_commands()
+
     game_field.print_field({"x": 1, "y": 1, "direction": "right", "is_jump": False})
-    print("List of all commands: ", main_command_list.preview_all_commands())
-    print("Basic robot direction - right")
+    print("List of all commands: ", commands_preview)
+    if commands_preview == "No commands yet":
+        print("Basic robot direction - right")
 
 
 # I KNOW, IT IS DIRTY FUNCTION, TODO: IF I`LL HAVE IDEAS HOW CHANGE IT - I`LL CHANGE
-def manage_commands_in_list(game_field, command_list, main_list=False):
+def manage_commands_in_list(game_field, command_list):
     """Commands management for main program and for functions(adding, updating, deleting, etc)
 
     """
@@ -388,20 +415,12 @@ def manage_commands_in_list(game_field, command_list, main_list=False):
         # "6": it is for exit
     }
 
-    if main_list:
-
-        menu_manage_commands = ("0 - Add commands\n"
-                                "1 - Change command\n"
-                                "2 - Add command after another\n"
-                                # Need add ability to insert functions  TODO:
-                                "3 - Remove command\n"
-                                "4 - Exit\n")
-    else:
-        menu_manage_commands = ("0 - Add commands\n"
-                                "1 - Change command\n"
-                                "2 - Add command after another\n"
-                                "3 - Remove command\n"
-                                "4 - Exit\n")
+    menu_manage_commands = ("0 - Add commands\n"
+                            "1 - Change command\n"
+                            "2 - Add command after another\n"
+                            "3 - Insert function"
+                            "4 - Remove command\n"
+                            "5 - Exit\n")
 
     menu_commands = ("0 - Turn right\n"
                      "1 - Turn left\n"
@@ -442,7 +461,7 @@ def manage_commands_in_list(game_field, command_list, main_list=False):
                     os.system("clear")  # cls
                 else:
                     os.system("clear")  # cls
-                    print("Error. There is no command with this index in the list")
+                    print(Back.RED + Fore.WHITE + "Error. There is no command with this index in the list")
 
         elif manage_commands_choice == '2':
             while True:
@@ -459,9 +478,14 @@ def manage_commands_in_list(game_field, command_list, main_list=False):
                     os.system("clear")  # cls
                 else:
                     os.system("clear")  # cls
-                    print("Error. There is no command with this index in the list")
+                    print(Back.RED + Fore.WHITE + "Error. There is no command with this index in the list")
 
         elif manage_commands_choice == '3':
+            # Insert function
+            while True:
+                pass
+
+        elif manage_commands_choice == '4':
             while True:
                 field_and_command_preview(game_field, command_list)
                 command_choice = int(input("Select which command you would like to remove(number): "))
@@ -474,12 +498,12 @@ def manage_commands_in_list(game_field, command_list, main_list=False):
                         break
                 else:
                     os.system("clear")  # cls
-                    print("Error. There is no command with this index in the list")
-        elif manage_commands_choice == '4':
+                    print(Back.RED + Fore.WHITE + "Error. There is no command with this index in the list")
+        elif manage_commands_choice == '5':
             break
         else:
             os.system("clear")
-            print("Error. There is no this option")
+            print(Back.RED + Fore.WHITE + "Error. There is no this option")
             continue
 
 
@@ -495,18 +519,23 @@ def main():
             "2) User set width and height of field\n"
             "3) Select from file\n")
 
+    cfonts.say("ROBOT GAME", gradient=["blue", "white"], align="center", font="simple3d")  # font="block"
+
     while True:
         # Game field creation
         print(menu)
         select_field_settings = input("Select(default - 0): ")
-        if select_field_settings == '0':
+        # TODO: if set like that, this error will not raise "Error. There is no this option"
+        select_field_settings = int(select_field_settings) if select_field_settings.isnumeric() else 0
+
+        if select_field_settings == 0:
             game_field = GameField(30)
             break
-        elif select_field_settings == '1':
+        elif select_field_settings == 1:
             random_width = random.randint(25, 50)
             game_field = GameField(random_width)
             break
-        elif select_field_settings == '2':
+        elif select_field_settings == 2:
             width = int(input("Field width: "))
             height = int(input("Field height: "))
             if width > 20 and height > 10:
@@ -514,9 +543,9 @@ def main():
                 break
             else:
                 os.system('clear')  # cls
-                print("Error. Width and height must be more than 20")
+                print(Back.RED + Fore.WHITE + "Error. Width and height must be more than 20")
                 continue
-        elif select_field_settings == '3':
+        elif select_field_settings == 3:
             field_from_file = True
             game_field = GameField()
             while True:
@@ -528,15 +557,12 @@ def main():
                     break
                 else:
                     os.system('clear')  # cls
-                    print("Error.  There is no this variant")
+                    print(Back.RED + Fore.WHITE + "Error.  There is no this option")
             game_field.upload_field(all_field_files[int(file_choice)-1])
-            break
-        elif select_field_settings == '':
-            game_field = GameField(30)
             break
         else:
             os.system('clear')  # cls
-            print("Error. There is no this variant")
+            print(Back.RED + Fore.WHITE + "Error. There is no this option")
             continue
 
     if not field_from_file:
@@ -565,10 +591,11 @@ def main():
         print(f"{len(functions)+1}) Create new function")
         print(f"{len(functions)+2}) Start game")
         main_manage_choice = input(f"Select(default - {len(functions)+2}): ")
+        # TODO: if set like that, this error will not raise "Error. There is no this option"
         main_manage_choice = int(main_manage_choice) if main_manage_choice.isnumeric() else len(functions)+2
         if 0 <= main_manage_choice <= len(functions)+2:
             if main_manage_choice == 0:
-                manage_commands_in_list(game_field, command_list, main_list=True)
+                manage_commands_in_list(game_field, command_list)
 
             elif 1 <= main_manage_choice <= len(functions):
                 function = functions[main_manage_choice-1]
@@ -582,8 +609,10 @@ def main():
             elif main_manage_choice == len(functions)+2:
                 try:
                     start_game(command_list)
-                    # TODO: print too something(if robot stay in the field)
+                    os.system('clear')  # cls
+                    print(Back.RED + Fore.WHITE + "There weren't enough commands for the robot to reach the end")
                 except UserWonException as ex:
+                    os.system('clear')  # cls
                     print(Back.GREEN + Fore.WHITE + str(ex))
                     break
                 except UserLoseException as ex:
@@ -591,10 +620,24 @@ def main():
                     print(Back.RED + Fore.WHITE + str(ex))
         else:
             os.system("clear")  # cls
-            print("Error. There is no this option")
+            print(Back.RED + Fore.WHITE + "Error. There is no this option")
+
+# TODO:
+# Деструктор  ???
+# Приватні методи та поля +-
+# Доробити функції
+# Закрити всі Тудушки
 
 
-# TODO: Разница в больше уровней становится непреодолимым препятствием. Думаю нет
+# побудова блок-схеми;
+# написання записки;
+# складання презентації;
+# написання промови до захисту;
+
+
+# TODO: Как лучше когда a > 0 and a < 10 или 0 < a < 10  ???
+
+# Разница в больше уровней становится непреодолимым препятствием. Итог: Не сделаю
 
 if __name__ == "__main__":
     main()
