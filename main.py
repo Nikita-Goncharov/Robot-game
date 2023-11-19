@@ -399,7 +399,7 @@ def field_and_command_preview(game_field, main_command_list):
 
 
 # I KNOW, IT IS DIRTY FUNCTION, TODO: IF I`LL HAVE IDEAS HOW CHANGE IT - I`LL CHANGE
-def manage_commands_in_list(game_field, command_list):
+def manage_commands_in_list(game_field, command_list, functions, main_list=False):
     """Commands management for main program and for functions(adding, updating, deleting, etc)
 
     """
@@ -415,10 +415,13 @@ def manage_commands_in_list(game_field, command_list):
         # "6": it is for exit
     }
 
+    # If function then stroke insertion function ability
+    main_list_extension = "3 - Insert function\n" if main_list else "\u0336".join("3 - Insert function\n")  # "\u0336" +
+
     menu_manage_commands = ("0 - Add commands\n"
                             "1 - Change command\n"
                             "2 - Add command after another\n"
-                            "3 - Insert function"
+                            f"{main_list_extension}"
                             "4 - Remove command\n"
                             "5 - Exit\n")
 
@@ -455,7 +458,7 @@ def manage_commands_in_list(game_field, command_list):
                     break
 
                 command_choice = int(input("Select which command you would like to change(number): "))
-                if command_choice >= 0 and command_choice <= command_list.commands_counter:
+                if command_choice > 0 and command_choice <= command_list.commands_counter:
                     if command_number_dict.get(new_command_choice, False):
                         command_list.change_command(command_choice-1, command_number_dict[new_command_choice])
                     os.system("clear")  # cls
@@ -472,7 +475,7 @@ def manage_commands_in_list(game_field, command_list):
                     break
 
                 command_choice = int(input("Select command after which you would like to add new command(number): "))
-                if command_choice >= 0 and command_choice <= command_list.commands_counter:
+                if command_choice > 0 and command_choice <= command_list.commands_counter:
                     if command_number_dict.get(new_command_choice, False):
                         command_list.insert_command_after(command_choice-1, command_number_dict[new_command_choice])
                     os.system("clear")  # cls
@@ -481,15 +484,36 @@ def manage_commands_in_list(game_field, command_list):
                     print(Back.RED + Fore.WHITE + "Error. There is no command with this index in the list")
 
         elif manage_commands_choice == '3':
-            # Insert function
-            while True:
-                pass
+            if main_list:
+                while True:
+                    field_and_command_preview(game_field, command_list)
+                    for index, func in enumerate(functions):
+                        print(f"{index}) {func.title}. Commands preview: {command_list.preview_all_commands()}")
+                    print(f"{len(functions)}) Exit")
+                    function_for_insertion = input("Select the function which you want to insert(default - 0): ")
+                    function_for_insertion = int(function_for_insertion) if function_for_insertion.isnumeric() else 0
+                    if function_for_insertion >= 0 and function_for_insertion <=len(functions):
+                        if function_for_insertion == len(functions):
+                            break
+                        command_choice = int(input("Select command after which you would like to add function(number): "))
+                        if command_choice > 0 and command_choice <= command_list.commands_counter:
+                            command_list.insert_function_after(command_choice-1, functions[function_for_insertion])
+                        else:
+                            os.system("clear")  # cls
+                            print(Back.RED + Fore.WHITE + "Error. There is no command with this index in the list")
+                    else:
+                        os.system("clear")  # cls
+                        print(Back.RED + Fore.WHITE + "Error. There is no this function.")
+            else:
+                os.system("clear")  # cls
+                print(Back.RED + Fore.WHITE + "Error. There is no this option for function now")
 
         elif manage_commands_choice == '4':
             while True:
                 field_and_command_preview(game_field, command_list)
-                command_choice = int(input("Select which command you would like to remove(number): "))
-                if command_choice >= 0 and command_choice <= command_list.commands_counter:
+                command_choice = input("Select which command you would like to remove(number): ")
+                command_choice = int(command_choice) if command_choice.isnumeric() else command_list.commands_counter+10
+                if command_choice > 0 and command_choice <= command_list.commands_counter:
                     command_list.remove_command(command_choice-1)
                     os.system("clear")  # cls
                     field_and_command_preview(game_field, command_list)
@@ -521,8 +545,8 @@ def main():
 
     cfonts.say("ROBOT GAME", gradient=["blue", "white"], align="center", font="simple3d")  # font="block"
 
+    # Game field creation
     while True:
-        # Game field creation
         print(menu)
         select_field_settings = input("Select(default - 0): ")
         # TODO: if set like that, this error will not raise "Error. There is no this option"
@@ -563,7 +587,6 @@ def main():
         else:
             os.system('clear')  # cls
             print(Back.RED + Fore.WHITE + "Error. There is no this option")
-            continue
 
     if not field_from_file:
         game_field.create_field()  # If from file field will create by default
@@ -573,7 +596,7 @@ def main():
 
     print("Field preview: ")
     game_field.print_field()
-    time.sleep(5)
+    time.sleep(1)  # TODO: in production make 5 seconds
     if not field_from_file:
         save_field = input("If do you want save this field type 'yes'(default - no):  ")
         if save_field == "yes":
@@ -593,31 +616,30 @@ def main():
         main_manage_choice = input(f"Select(default - {len(functions)+2}): ")
         # TODO: if set like that, this error will not raise "Error. There is no this option"
         main_manage_choice = int(main_manage_choice) if main_manage_choice.isnumeric() else len(functions)+2
-        if 0 <= main_manage_choice <= len(functions)+2:
-            if main_manage_choice == 0:
-                manage_commands_in_list(game_field, command_list)
+        if main_manage_choice == 0:
+            manage_commands_in_list(game_field, command_list, functions, main_list=True)
 
-            elif 1 <= main_manage_choice <= len(functions):
-                function = functions[main_manage_choice-1]
-                manage_commands_in_list(game_field, function)
-                functions[main_manage_choice-1] = function
+        elif 1 <= main_manage_choice <= len(functions):
+            function = functions[main_manage_choice-1]
+            manage_commands_in_list(game_field, function, functions)
+            functions[main_manage_choice-1] = function
 
-            elif main_manage_choice == len(functions)+1:
-                new_func_name = input("Select name for new function: ")
-                functions.append(RobotCommandManager(title=new_func_name))
+        elif main_manage_choice == len(functions)+1:
+            new_func_name = input("Select name for new function: ")
+            functions.append(RobotCommandManager(title=new_func_name))
 
-            elif main_manage_choice == len(functions)+2:
-                try:
-                    start_game(command_list)
-                    os.system('clear')  # cls
-                    print(Back.RED + Fore.WHITE + "There weren't enough commands for the robot to reach the end")
-                except UserWonException as ex:
-                    os.system('clear')  # cls
-                    print(Back.GREEN + Fore.WHITE + str(ex))
-                    break
-                except UserLoseException as ex:
-                    os.system('clear')  # cls
-                    print(Back.RED + Fore.WHITE + str(ex))
+        elif main_manage_choice == len(functions)+2:
+            try:
+                start_game(command_list)
+                os.system('clear')  # cls
+                print(Back.RED + Fore.WHITE + "There weren't enough commands for the robot to reach the end")
+            except UserWonException as ex:
+                os.system('clear')  # cls
+                print(Back.GREEN + Fore.WHITE + str(ex))
+                break
+            except UserLoseException as ex:
+                os.system('clear')  # cls
+                print(Back.RED + Fore.WHITE + str(ex))
         else:
             os.system("clear")  # cls
             print(Back.RED + Fore.WHITE + "Error. There is no this option")
@@ -629,13 +651,17 @@ def main():
 # Закрити всі Тудушки
 
 
+# TODO: После удаления последней команды почему-то перестают добавляться в конец новые
+# TODO: При заполнении одной из "функций" в остальных появляются такие же команды
+
+
 # побудова блок-схеми;
 # написання записки;
 # складання презентації;
 # написання промови до захисту;
 
 
-# TODO: Как лучше когда a > 0 and a < 10 или 0 < a < 10  ???
+# Как лучше когда a > 0 and a < 10 или 0 < a < 10  ???
 
 # Разница в больше уровней становится непреодолимым препятствием. Итог: Не сделаю
 
