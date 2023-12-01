@@ -1,10 +1,11 @@
 import os
-import random
+# import sys
 import time
 import json
 import copy
-import sys
-from termios import tcflush, TCIOFLUSH
+import random
+import logging
+# from termios import tcflush, TCIOFLUSH
 
 import emoji
 import cfonts
@@ -25,6 +26,7 @@ __doc__ = """
     func main (starting point)
 """
 
+logging.basicConfig(level=logging.INFO, filename="robot_game.log", filemode="a", format="%(asctime)s %(levelname)s %(message)s")
 
 init(autoreset=True)
 
@@ -56,8 +58,10 @@ class GameField:
             self.width = 0
             self.height = 0
         self.field = []
+        logging.info(f"Created game field")
 
     def create_field(self):
+        logging.info(f"Fill game field with elements")
         for i in range(self.height):
             self.field.append([])
             for j in range(self.width):
@@ -152,10 +156,13 @@ class GameField:
         all_field_files_stringed = "".join(self.get_game_field_files())
         while file_random_section == 0 or file_random_section in all_field_files_stringed:
             file_random_section = str(random.randint(1000, 9999))
-        with open(f"file_{file_random_section}.json", 'w') as file:
+        filename = f"file_{file_random_section}.json"
+        with open(filename, 'w') as file:
             json.dump(game_field_json, file)
+        logging.info(f"Field saved in: {filename}")
 
     def upload_field(self, filename):
+        logging.info(f"Upload field from file: {filename}")
         with open(filename, 'r') as file:
             json_object = json.load(file)
             self.width, self.height = json_object["width"], json_object["height"]
@@ -190,6 +197,7 @@ class RobotCommand:
         self.prev = None
         self.next = None
         RobotCommand.__next_command_id += 1
+        logging.info(f"Created new command: id - {self.command_id}, move - {self.move}")
 
     def set_robot(self):
         if self.prev is not None:
@@ -228,21 +236,25 @@ class RobotCommand:
                     case 'top':
                         self.robot["y"] -= 1
 
-        # with open("robot_positions.txt", "a") as file:
-        #     file.write(str(self.robot))
-        #     file.write("\n")
+    def __repr__(self):
+        return f"{self.command_id} - {self.move}: {self.robot}"
+
+    def __del__(self):
+        logging.info(f"Command {self} was removed from list")
 
 
 class RobotCommandManager:
     # bidirectional list
 
     def __init__(self, title="Main program"):
+        logging.info(f"Created new commands list with name: {title}")
         self.commands_counter = 0
         self.title = title
         self.head = None
         self.tail = None
 
     def push_back(self, new_move):
+        logging.info(f"Add command '{new_move}' to end")
         new_node = RobotCommand(new_move)
         new_node.prev = self.tail
         if self.tail is None:
@@ -277,6 +289,7 @@ class RobotCommandManager:
         return ", ".join(list_of_moves) or "No commands yet"
 
     def remove_command(self, command_id):
+        logging.info(f"Remove {command_id + 1} command")
         if self.head is None:
             return
 
@@ -300,6 +313,7 @@ class RobotCommandManager:
         self.commands_counter -= 1
 
     def change_command(self, command_id, new_move):
+        logging.info(f"Change command with '{new_move}' after {command_id + 1} command")
         new_command = RobotCommand(new_move)
 
         if self.head is None:
@@ -314,16 +328,19 @@ class RobotCommandManager:
         if self.head == command:
             self.head = new_command
             self.head.next = command.next
-
-        if command.next is not None:
-            command.next.prev = new_command
+            self.head.next.prev = new_command
+        elif self.tail == command:
+            self.tail = new_command
+            self.tail.prev = command.prev
+            self.tail.prev.next = new_command
+        else:
             new_command.next = command.next
-
-        if command.prev is not None:
-            command.prev.next = new_command
             new_command.prev = command.prev
+            new_command.next.prev = new_command
+            new_command.prev.next = new_command
 
     def insert_command_after(self, command_id, move):
+        logging.info(f"Insert new command after {command_id+1} command")
         if command_id == -1:
             self.__insert_command_to_start(move)
         else:
@@ -350,12 +367,13 @@ class RobotCommandManager:
         head = self.head
         if head is not None:
             new_head_command.next = head
-            head.prev = new_head_command  # TODO: tail ??? where checking
+            head.prev = new_head_command
 
         self.head = new_head_command
         self.commands_counter += 1
 
     def insert_function_after(self, command_id, function):
+        logging.info(f"Insert function after {command_id+1} command")
         if command_id == -1:
             self.__insert_function_to_start(function)
         else:
@@ -394,6 +412,7 @@ class RobotCommandManager:
 
     @staticmethod
     def __duplicate_function_list(function):
+        logging.info(f"Make duplicates of all commands in function")
         command = head_duplicate = copy.copy(function.head)
         while command is not None:
             if command.next is not None:
@@ -432,6 +451,7 @@ def start_game(command_list, game_field):
         os.system('clear')  # cls
         command_list[command_number].set_robot()
         robot_position = command_list[command_number].robot
+        logging.info(f"Current robot data: {robot_position}")
 
         command_list[command_number].game_field.print_field(robot_position)
 
@@ -441,7 +461,7 @@ def start_game(command_list, game_field):
         time.sleep(0.5)
 
 
-def field_and_command_preview(game_field, main_command_list):
+def field_and_command_preview(game_field, main_command_list, main_list=False):
     """Game field and commands preview for user comfort using
 
     """
@@ -450,7 +470,7 @@ def field_and_command_preview(game_field, main_command_list):
 
     game_field.print_field({"x": 1, "y": 1, "direction": "right", "is_jump": False})
     print("List of all commands: ", commands_preview)
-    if commands_preview == "No commands yet":
+    if commands_preview == "No commands yet" and main_list:
         print("Basic robot direction - right")
 
 
@@ -488,19 +508,21 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
                      "5 - Jump\n"
                      "6 - Exit\n")
 
+    os.system("clear")
     while True:
         print(menu_manage_commands)
         manage_commands_choice = input("Select(default - 0): ")
 
         if manage_commands_choice == '' or manage_commands_choice == '0':
             while True:
-                field_and_command_preview(game_field, command_list)
+                field_and_command_preview(game_field, command_list, main_list)
                 print(menu_commands)
                 command_choice = input("Select(default - 4): ")
                 if command_choice == "6":
                     os.system("clear")  # cls
                     break
                 elif command_number_dict.get(command_choice, False):
+                    logging.info(f"Add new command to back: {command_number_dict[command_choice]}")
                     command_list.push_back(command_number_dict[command_choice])
                     os.system("clear")  # cls
                 else:
@@ -509,7 +531,7 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
 
         elif manage_commands_choice == '1':
             while True:
-                field_and_command_preview(game_field, command_list)
+                field_and_command_preview(game_field, command_list, main_list)
                 print(menu_commands)
                 new_command_choice = input("Select(default - 4): ")
                 if new_command_choice == "6":
@@ -520,6 +542,7 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
                 command_choice = int(command_choice) if command_choice.isnumeric() else -1
                 if command_choice > 0 and command_choice <= command_list.commands_counter:
                     if command_number_dict.get(new_command_choice, False):
+                        logging.info(f"Change command {command_choice} with new: {command_number_dict[new_command_choice]}")
                         command_list.change_command(command_choice-1, command_number_dict[new_command_choice])
                         os.system("clear")  # cls
                     else:
@@ -531,7 +554,7 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
 
         elif manage_commands_choice == '2':
             while True:
-                field_and_command_preview(game_field, command_list)
+                field_and_command_preview(game_field, command_list, main_list)
                 print(menu_commands)
                 new_command_choice = input("Select(default - 4): ")
                 if new_command_choice == "6":
@@ -542,6 +565,7 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
                 command_choice = int(command_choice) if command_choice.isnumeric() else -1
                 if command_choice >= 0 and command_choice <= command_list.commands_counter:
                     if command_number_dict.get(new_command_choice, False):
+                        logging.info(f"Add command: {command_number_dict[new_command_choice]} after {command_choice} in list")
                         command_list.insert_command_after(command_choice-1, command_number_dict[new_command_choice])
                         os.system("clear")  # cls
                     else:
@@ -554,7 +578,7 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
         elif manage_commands_choice == '3':
             if main_list:
                 while True:
-                    field_and_command_preview(game_field, command_list)
+                    field_and_command_preview(game_field, command_list, main_list)
                     for index, func in enumerate(functions):
                         print(f"{index}) {func.title}. Commands preview: {func.preview_all_commands()}")
                     print(f"{len(functions)}) Exit")
@@ -569,6 +593,7 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
                         if command_choice >= 0 and command_choice <= command_list.commands_counter:
                             copy_of_function = copy.copy(functions[function_for_insertion])
                             if copy_of_function.commands_counter != 0:
+                                logging.info(f"Insert function: {copy_of_function}, after {command_choice} command")
                                 command_list.insert_function_after(
                                     command_choice-1,
                                     copy_of_function
@@ -586,13 +611,14 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
 
         elif manage_commands_choice == '4':
             while True:
-                field_and_command_preview(game_field, command_list)
+                field_and_command_preview(game_field, command_list, main_list)
                 command_choice = input("Select which command you would like to remove(number): ")
                 command_choice = int(command_choice) if command_choice.isnumeric() else command_list.commands_counter+10
                 if command_choice > 0 and command_choice <= command_list.commands_counter:
+                    logging.info(f"Remove command: {command_choice}")
                     command_list.remove_command(command_choice-1)
                     os.system("clear")  # cls
-                    field_and_command_preview(game_field, command_list)
+                    field_and_command_preview(game_field, command_list, main_list)
                     break
                 else:
                     os.system("clear")  # cls
@@ -606,6 +632,8 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
 
 
 def main():
+    logging.info(f"")
+    logging.info(f"****Start program****")
     """Main program function(game creation, commands adding, start game)
 
     """
@@ -617,7 +645,7 @@ def main():
             "2) User set width and height of field\n"
             "3) Select from file\n")
 
-    cfonts.say("ROBOT GAME", gradient=["blue", "white"], align="center", font="simple3d")  # font="block"
+    cfonts.say("ROBOT GAME", gradient=["blue", "white"], align="center", font="simple3d")
 
     # Game field creation
     while True:
@@ -625,13 +653,16 @@ def main():
         select_field_settings = input("Select(default - 0): ")
 
         if select_field_settings == '0' or select_field_settings == '':
+            logging.info(f"Auto create field")
             game_field = GameField(30)
             break
         elif select_field_settings == '1':
+            logging.info(f"Random create field")
             random_width = random.randint(25, 50)
             game_field = GameField(random_width)
             break
         elif select_field_settings == '2':
+            logging.info(f"User create field")
             while True:
                 print("Width should be more than 20 and height more than 10")
                 width = input("Field width: ")
@@ -646,6 +677,7 @@ def main():
                     print(Back.RED + Fore.WHITE + "Error. Width or height is not a valid value")
             break
         elif select_field_settings == '3':
+            logging.info(f"Upload field from file")
             all_field_files = GameField.get_game_field_files()
             if len(all_field_files) == 0:
                 os.system('clear')  # cls
@@ -680,6 +712,7 @@ def main():
     time.sleep(1)  # TODO: in production make 5 seconds
     if not field_from_file:
         save_field = input("If do you want save this field type 'yes'(default - no):  ")
+        logging.info(f"Save field answer: {save_field}")
         if save_field == "yes":
             game_field.save_field()
     os.system('clear')  # cls
@@ -687,6 +720,8 @@ def main():
     # Command management
     command_list = RobotCommandManager()
     functions = [RobotCommandManager(title=f"Function {i+1}") for i in range(3)]
+    logging.info(f"Main command list: {command_list}")
+    logging.info(f"Functions of commands: {functions}")
 
     while True:
         print("0) Main program")
@@ -704,25 +739,32 @@ def main():
             main_manage_choice = -1
 
         if main_manage_choice == 0:
+            logging.info(f"Operations with main command list")
             manage_commands_in_list(game_field, command_list, functions, main_list=True)
 
         elif 1 <= main_manage_choice <= len(functions):
+            logging.info(f"Operations with one of functions")
             function = functions[main_manage_choice-1]
             manage_commands_in_list(game_field, function, functions)
             functions[main_manage_choice-1] = function
 
         elif main_manage_choice == len(functions)+1:
             new_func_name = input("Select name for new function: ")
+            logging.info(f"Created new funtion with name: {new_func_name}")
             functions.append(RobotCommandManager(title=new_func_name))
+            logging.info(f"Updated functions: {functions}")
 
         elif main_manage_choice == len(functions)+2:
+            logging.info(f"Start game")
             try:
                 start_game(command_list, game_field)
                 raise UserLoseException("There weren't enough commands for the robot to reach the end")
             except UserLoseException as ex:
+                logging.info(f"Game ended with error: {str(ex)}")
                 print(Back.RED + Fore.WHITE + emoji.emojize(str(ex)))
                 print()
             except UserWonException as ex:
+                logging.info(f"User won!")
                 print(Back.GREEN + Fore.WHITE + emoji.emojize(str(ex)))
                 print()
                 break
@@ -730,14 +772,12 @@ def main():
             os.system("clear")  # cls
             print(Back.RED + Fore.WHITE + "Error. There is no this option")
 
-        # Clear input(For linux)  # TODO: test in windows
-        tcflush(sys.stdin, TCIOFLUSH)
-
 # TODO:
-# Деструктор  ???  WHERE?????????????????????
+# Clear input(For linux)  # test in windows
+# tcflush(sys.stdin, TCIOFLUSH)
+
 # Закрити всі Тудушки
 
-# TODO: прочесать программу трезвым взглядом
 # TODO: Add system(clear) where it is needed
 
 # побудова блок-схеми;
@@ -745,12 +785,12 @@ def main():
 # складання презентації;
 # написання промови до захисту;
 
-
 # Сделанные мной улучшения:
 # * Запись игровых полей в уникальные файлы
 # * Загрузка игровых полей в игру(юзер может выбрать один из файлов и загрузить его)
 # * Юзер может создавать новые "функции" и давать им осмысленное название
 # * Юзер может увидеть, где робот упёрся в препятствие или стену и потом на своих ошибках переделать программу робота
+# * Логирование
 
 
 if __name__ == "__main__":
