@@ -261,7 +261,6 @@ class RobotCommandManager:
             self.head = new_node
             self.tail = new_node
             new_node.next = None
-
         else:
             self.tail.next = new_node
             new_node.next = None
@@ -270,7 +269,6 @@ class RobotCommandManager:
 
     def __getitem__(self, command_id):
         if self.head is None:
-            print("List is empty")
             return
         i = 0
         command = self.head
@@ -293,11 +291,7 @@ class RobotCommandManager:
         if self.head is None:
             return
 
-        i = 0
-        command = self.head
-        while command_id != i:
-            command = command.next
-            i += 1
+        command = self[command_id]
 
         if command.prev is not None:
             command.prev.next = command.next
@@ -309,21 +303,15 @@ class RobotCommandManager:
         else:
             self.tail = command.prev
 
-        # del command
         self.commands_counter -= 1
 
     def change_command(self, command_id, new_move):
         logging.info(f"Change command with '{new_move}' after {command_id + 1} command")
-        new_command = RobotCommand(new_move)
-
         if self.head is None:
             return
 
-        i = 0
-        command = self.head
-        while command_id != i:
-            command = command.next
-            i += 1
+        new_command = RobotCommand(new_move)
+        command = self[command_id]
 
         if self.head == command:
             self.head = new_command
@@ -344,30 +332,29 @@ class RobotCommandManager:
         if command_id == -1:
             self.__insert_command_to_start(move)
         else:
-            i = 0
-            command = self.head
-            while command_id != i:
-                command = command.next
-                i += 1
+            command = self[command_id]
 
             if command is not None:
-                new_node = RobotCommand(move)
-                new_node.next = command.next
-                command.next = new_node
-                new_node.prev = command
-                if new_node.next is not None:
-                    new_node.next.prev = new_node
+                new_command = RobotCommand(move)
+                new_command.next = command.next
+                command.next = new_command
+                new_command.prev = command
+                if new_command.next is not None:
+                    new_command.next.prev = new_command
 
                 if command == self.tail:
-                    self.tail = new_node
+                    self.tail = new_command
                 self.commands_counter += 1
 
     def __insert_command_to_start(self, move):
         new_head_command = RobotCommand(move)
+        if self.head is None:
+            self.push_back(move)
+            return
+
         head = self.head
-        if head is not None:
-            new_head_command.next = head
-            head.prev = new_head_command
+        new_head_command.next = head
+        head.prev = new_head_command
 
         self.head = new_head_command
         self.commands_counter += 1
@@ -377,21 +364,15 @@ class RobotCommandManager:
         if command_id == -1:
             self.__insert_function_to_start(function)
         else:
-            current = self.head
-            i = 0
             function_duplicate_head, function_duplicate_tail = self.__duplicate_function_list(function)
-            while current:
-                if i == command_id:
-                    function_duplicate_tail.next = current.next
-                    if current.next:
-                        current.next.prev = function_duplicate_tail
-                    current.next = function_duplicate_head
-                    function_duplicate_head.prev = current
-                    if current == self.tail:
-                        self.tail = function_duplicate_tail
-                    break
-                current = current.next
-                i += 1
+            command = self[command_id]
+            function_duplicate_tail.next = command.next
+            if command.next:
+                command.next.prev = function_duplicate_tail
+            command.next = function_duplicate_head
+            function_duplicate_head.prev = command
+            if command == self.tail:
+                self.tail = function_duplicate_tail
             self.commands_counter += function.commands_counter
 
     def __insert_function_to_start(self, function):
@@ -512,6 +493,7 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
     while True:
         print(menu_manage_commands)
         manage_commands_choice = input("Select(default - 0): ")
+        os.system("clear")  # cls
 
         if manage_commands_choice == '' or manage_commands_choice == '0':
             while True:
@@ -614,6 +596,11 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
                 field_and_command_preview(game_field, command_list, main_list)
                 command_choice = input("Select which command you would like to remove(number): ")
                 command_choice = int(command_choice) if command_choice.isnumeric() else command_list.commands_counter+10
+                if command_list.commands_counter == 0:
+                    os.system("clear")  # cls
+                    print(Back.RED + Fore.WHITE + "Error. There is no command now is list")
+                    break
+
                 if command_choice > 0 and command_choice <= command_list.commands_counter:
                     logging.info(f"Remove command: {command_choice}")
                     command_list.remove_command(command_choice-1)
@@ -632,11 +619,12 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
 
 
 def main():
-    logging.info(f"")
-    logging.info(f"****Start program****")
     """Main program function(game creation, commands adding, start game)
 
     """
+    logging.info(f"")
+    logging.info(f"****Start program****")
+    os.system("clear")  # cls
     field_from_file = False
 
     # In multi string are added unnecessary spaces
@@ -709,7 +697,7 @@ def main():
 
     print("Field preview: ")
     game_field.print_field()
-    time.sleep(1)  # TODO: in production make 5 seconds
+    time.sleep(5)
     if not field_from_file:
         save_field = input("If do you want save this field type 'yes'(default - no):  ")
         logging.info(f"Save field answer: {save_field}")
@@ -729,6 +717,7 @@ def main():
             print(f"{index+1}) {func.title}")
         print(f"{len(functions)+1}) Create new function")
         print(f"{len(functions)+2}) Start game")
+        print(f"{len(functions) + 3}) Stop program")
         main_manage_choice = input(f"Select(default - {len(functions)+2}): ")
 
         if main_manage_choice.isnumeric():
@@ -739,16 +728,19 @@ def main():
             main_manage_choice = -1
 
         if main_manage_choice == 0:
+            os.system("clear")  # cls
             logging.info(f"Operations with main command list")
             manage_commands_in_list(game_field, command_list, functions, main_list=True)
 
         elif 1 <= main_manage_choice <= len(functions):
+            os.system("clear")  # cls
             logging.info(f"Operations with one of functions")
             function = functions[main_manage_choice-1]
             manage_commands_in_list(game_field, function, functions)
             functions[main_manage_choice-1] = function
 
         elif main_manage_choice == len(functions)+1:
+            os.system("clear")  # cls
             new_func_name = input("Select name for new function: ")
             logging.info(f"Created new funtion with name: {new_func_name}")
             functions.append(RobotCommandManager(title=new_func_name))
@@ -768,29 +760,20 @@ def main():
                 print(Back.GREEN + Fore.WHITE + emoji.emojize(str(ex)))
                 print()
                 break
+            # For clear input, but also it can remove some previous prints(Not good idea)
+            # tcflush(sys.stdin, TCIOFLUSH)
+        elif main_manage_choice == len(functions) + 3:
+            break
         else:
             os.system("clear")  # cls
             print(Back.RED + Fore.WHITE + "Error. There is no this option")
 
-# TODO:
-# Clear input(For linux)  # test in windows
-# tcflush(sys.stdin, TCIOFLUSH)
-
-# Закрити всі Тудушки
-
-# TODO: Add system(clear) where it is needed
-
-# побудова блок-схеми;
-# написання записки;
-# складання презентації;
-# написання промови до захисту;
-
-# Сделанные мной улучшения:
-# * Запись игровых полей в уникальные файлы
-# * Загрузка игровых полей в игру(юзер может выбрать один из файлов и загрузить его)
-# * Юзер может создавать новые "функции" и давать им осмысленное название
-# * Юзер может увидеть, где робот упёрся в препятствие или стену и потом на своих ошибках переделать программу робота
-# * Логирование
+# Upgrades I made:
+# * Write game fields to unique files
+# * Loading game fields into the game (the user can select one of the files and load it)
+# * The user can create new “functions” and give them a meaningful name
+# * The user can see where the robot has hit an obstacle or wall and then remake the robot’s program based on their mistakes
+# * Logging
 
 
 if __name__ == "__main__":
