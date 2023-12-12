@@ -1,11 +1,9 @@
 import os
-# import sys
 import time
 import json
 import copy
 import random
 import logging
-# from termios import tcflush, TCIOFLUSH
 
 import emoji
 import cfonts
@@ -26,7 +24,12 @@ __doc__ = """
     func main (starting point)
 """
 
-logging.basicConfig(level=logging.INFO, filename="robot_game.log", filemode="a", format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    filename="robot_game.log",
+    filemode="a",
+    format="%(asctime)s %(levelname)s %(message)s"
+)
 
 init(autoreset=True)
 
@@ -524,7 +527,9 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
                 command_choice = int(command_choice) if command_choice.isnumeric() else -1
                 if command_choice > 0 and command_choice <= command_list.commands_counter:
                     if command_number_dict.get(new_command_choice, False):
-                        logging.info(f"Change command {command_choice} with new: {command_number_dict[new_command_choice]}")
+                        logging.info(
+                            f"Change command {command_choice} with new: {command_number_dict[new_command_choice]}"
+                        )
                         command_list.change_command(command_choice-1, command_number_dict[new_command_choice])
                         os.system("clear")  # cls
                     else:
@@ -547,7 +552,9 @@ def manage_commands_in_list(game_field, command_list, functions, main_list=False
                 command_choice = int(command_choice) if command_choice.isnumeric() else -1
                 if command_choice >= 0 and command_choice <= command_list.commands_counter:
                     if command_number_dict.get(new_command_choice, False):
-                        logging.info(f"Add command: {command_number_dict[new_command_choice]} after {command_choice} in list")
+                        logging.info(
+                            f"Add command: {command_number_dict[new_command_choice]} after {command_choice} in list"
+                        )
                         command_list.insert_command_after(command_choice-1, command_number_dict[new_command_choice])
                         os.system("clear")  # cls
                     else:
@@ -674,15 +681,15 @@ def main():
             game_field = GameField()
             while True:
                 for index, filename in enumerate(all_field_files):
-                    print(f"{index+1}) {filename}")
+                    print(f"{index}) {filename}")
                 file_choice = input("Number of file from which you want load field: ")
                 file_choice = int(file_choice) if file_choice.isnumeric() else -1
-                if file_choice > 0 and file_choice <= len(all_field_files):
+                if file_choice >= 0 and file_choice < len(all_field_files):
                     break
                 else:
                     os.system('clear')  # cls
                     print(Back.RED + Fore.WHITE + "Error. There is no this option")
-            game_field.upload_field(all_field_files[int(file_choice)-1])
+            game_field.upload_field(all_field_files[int(file_choice)])
             field_from_file = True
             break
         else:
@@ -717,7 +724,7 @@ def main():
             print(f"{index+1}) {func.title}")
         print(f"{len(functions)+1}) Create new function")
         print(f"{len(functions)+2}) Start game")
-        print(f"{len(functions) + 3}) Stop program")
+        print(f"{len(functions) + 3}) Exit")
         main_manage_choice = input(f"Select(default - {len(functions)+2}): ")
 
         if main_manage_choice.isnumeric():
@@ -744,6 +751,7 @@ def main():
             new_func_name = input("Select name for new function: ")
             logging.info(f"Created new funtion with name: {new_func_name}")
             functions.append(RobotCommandManager(title=new_func_name))
+            os.system("clear")  # cls
             logging.info(f"Updated functions: {functions}")
 
         elif main_manage_choice == len(functions)+2:
@@ -760,20 +768,12 @@ def main():
                 print(Back.GREEN + Fore.WHITE + emoji.emojize(str(ex)))
                 print()
                 break
-            # For clear input, but also it can remove some previous prints(Not good idea)
-            # tcflush(sys.stdin, TCIOFLUSH)
+
         elif main_manage_choice == len(functions) + 3:
             break
         else:
             os.system("clear")  # cls
             print(Back.RED + Fore.WHITE + "Error. There is no this option")
-
-# Upgrades I made:
-# * Write game fields to unique files
-# * Loading game fields into the game (the user can select one of the files and load it)
-# * The user can create new “functions” and give them a meaningful name
-# * The user can see where the robot has hit an obstacle or wall and then remake the robot’s program based on their mistakes
-# * Logging
 
 
 if __name__ == "__main__":
