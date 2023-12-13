@@ -100,6 +100,9 @@ class GameField:
 
     # This method like const method in c++
     def print_field(self, robot_position=None):
+        logging.info(
+            f"Robot position: {robot_position}"
+        )
         current_command_result = None
         barrier_ex = UserLoseException("Error. Next cell is a barrier, but you didn't jump. You lose :cross_mark:")
         wall_ex = UserLoseException("Error. Next cell it is wall. You lose :cross_mark:")
@@ -208,6 +211,11 @@ class RobotCommand:
         else:
             self.robot = {"x": 1, "y": 1, "direction": "right", "is_jump": False}
 
+        if self.move == "jump":
+            self.robot["is_jump"] = True
+        else:
+            self.robot["is_jump"] = False
+
         match self.move:
             case 'turn_right':
                 self.robot["direction"] = 'right'
@@ -228,7 +236,6 @@ class RobotCommand:
                     case 'top':
                         self.robot["y"] -= 1
             case 'jump':
-                self.robot["is_jump"] = True
                 match self.robot["direction"]:
                     case 'right':
                         self.robot["x"] += 1
@@ -758,7 +765,7 @@ def main():
             logging.info(f"Start game")
             try:
                 start_game(command_list, game_field)
-                raise UserLoseException("There weren't enough commands for the robot to reach the end")
+                raise UserLoseException("Error. There weren't enough commands for the robot to reach the end")
             except UserLoseException as ex:
                 logging.info(f"Game ended with error: {str(ex)}")
                 print(Back.RED + Fore.WHITE + emoji.emojize(str(ex)))
